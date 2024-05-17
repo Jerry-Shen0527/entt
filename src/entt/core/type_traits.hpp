@@ -760,14 +760,22 @@ template<typename Type, std::size_t... Index>
     return (dispatch_is_equality_comparable<std::tuple_element_t<Index, Type>>() && ...);
 }
 
-template<typename>
-[[nodiscard]] constexpr bool maybe_equality_comparable(char) {
-    return false;
-}
+// Primary template, assumes Type is not equality comparable
+template<typename Type, typename = void>
+struct is_equality_comparable: std::false_type {};
 
+// Specialization for types that have equality operator defined
 template<typename Type>
-[[nodiscard]] constexpr auto maybe_equality_comparable(int) -> decltype(std::declval<Type>() == std::declval<Type>()) {
-    return true;
+struct is_equality_comparable<Type, std::void_t<decltype(std::declval<Type>() == std::declval<Type>())>>: std::true_type {};
+
+// Helper variable template
+template<typename Type>
+inline constexpr bool is_equality_comparable_v = is_equality_comparable<Type>::value;
+
+// maybe_equality_comparable function template
+template<typename Type>
+[[nodiscard]] constexpr bool maybe_equality_comparable() {
+    return is_equality_comparable_v<Type>;
 }
 
 template<typename Type>
@@ -775,23 +783,23 @@ template<typename Type>
     if constexpr(std::is_array_v<Type>) {
         return false;
     } else if constexpr(is_iterator_v<Type>) {
-        return maybe_equality_comparable<Type>(0);
+        return maybe_equality_comparable<Type>();
     } else if constexpr(has_value_type<Type>::value) {
         if constexpr(std::is_same_v<typename Type::value_type, Type>) {
-            return maybe_equality_comparable<Type>(0);
+            return maybe_equality_comparable<Type>();
         } else if constexpr(dispatch_is_equality_comparable<typename Type::value_type>()) {
-            return maybe_equality_comparable<Type>(0);
+            return maybe_equality_comparable<Type>();
         } else {
             return false;
         }
     } else if constexpr(is_complete_v<std::tuple_size<std::remove_cv_t<Type>>>) {
         if constexpr(has_tuple_size_value<Type>::value) {
-            return maybe_equality_comparable<Type>(0) && unpack_maybe_equality_comparable<Type>(std::make_index_sequence<std::tuple_size<Type>::value>{});
+            return maybe_equality_comparable<Type>() && unpack_maybe_equality_comparable<Type>(std::make_index_sequence<std::tuple_size<Type>::value>{});
         } else {
-            return maybe_equality_comparable<Type>(0);
+            return maybe_equality_comparable<Type>();
         }
     } else {
-        return maybe_equality_comparable<Type>(0);
+        return maybe_equality_comparable<Type>();
     }
 }
 
