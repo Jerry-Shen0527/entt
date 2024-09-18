@@ -764,9 +764,10 @@ template<typename Type, std::size_t... Index>
 template<typename Type, typename = void>
 struct is_equality_comparable: std::false_type {};
 
-// Specialization for types that have equality operator defined
+// Specialization for types that have equality operator defined and return bool
 template<typename Type>
-struct is_equality_comparable<Type, std::void_t<decltype(std::declval<Type>() == std::declval<Type>())>>: std::true_type {};
+struct is_equality_comparable<Type, std::void_t<decltype(std::declval<Type>() == std::declval<Type>())>>
+    : std::is_same<decltype(std::declval<Type>() == std::declval<Type>()), bool> {};
 
 // Helper variable template
 template<typename Type>
